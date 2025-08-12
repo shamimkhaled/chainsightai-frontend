@@ -65,6 +65,15 @@ interface ContractResult {
   risk_score: number;
 }
 
+interface IPRateLimitInfo {
+  daily_limit: number;
+  current_count: number;
+  remaining: number;
+  can_proceed: boolean;
+  reset_time: string;
+  ip_address?: string;
+}
+
 export function ContractUploadSection() {
   const [formData, setFormData] = useState<UploadFormData>({
     files: [],
@@ -72,13 +81,7 @@ export function ContractUploadSection() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingRateLimit, setIsCheckingRateLimit] = useState(false);
-  const [rateLimitInfo, setRateLimitInfo] = useState<{
-    daily_limit: number;
-    current_count: number;
-    remaining: number;
-    can_proceed: boolean;
-    reset_time: string;
-  } | null>(null);
+  const [rateLimitInfo, setRateLimitInfo] = useState<IPRateLimitInfo | null>(null);
   const [results, setResults] = useState<ContractResult[]>([]);
   const [showResults, setShowResults] = useState(false);
   const { toast } = useToast();
@@ -100,17 +103,18 @@ export function ContractUploadSection() {
   };
 
   useEffect(() => {
-    // Check rate limit when component mounts
-    checkRateLimit();
+    // Check IP rate limit when component mounts
+    checkIPRateLimit();
   }, []);
 
-  const checkRateLimit = async () => {
+  const checkIPRateLimit = async () => {
     setIsCheckingRateLimit(true);
     try {
       const response = await fetch('https://chainsightai-app-6kgwc.ondigitalocean.app/api/v1/rate-limit/', {
         method: 'GET',
         headers: {
           'accept': 'application/json',
+          // Let the browser automatically include the client IP
         }
       });
 
@@ -119,11 +123,13 @@ export function ContractUploadSection() {
         setRateLimitInfo(rateLimitData);
         return rateLimitData;
       } else {
-        console.error('Failed to check rate limit');
+        console.error('Failed to check IP rate limit:', response.status);
+        // Handle rate limit check failure gracefully
         return null;
       }
     } catch (error) {
-      console.error('Error checking rate limit:', error);
+      console.error('Error checking IP rate limit:', error);
+      // Don't block the user if rate limit check fails
       return null;
     } finally {
       setIsCheckingRateLimit(false);
@@ -149,23 +155,23 @@ export function ContractUploadSection() {
       return;
     }
 
-    // Check rate limit before proceeding
-    const rateLimitData = await checkRateLimit();
-    if (!rateLimitData || !rateLimitData.can_proceed) {
-      const resetDate = rateLimitData?.reset_time ? new Date(rateLimitData.reset_time).toLocaleString() : 'tomorrow';
+    // Check IP rate limit before proceeding
+    const rateLimitData = await checkIPRateLimit();
+    if (rateLimitData && !rateLimitData.can_proceed) {
+      const resetDate = rateLimitData.reset_time ? new Date(rateLimitData.reset_time).toLocaleString() : 'tomorrow';
       toast({
         title: "Rate limit exceeded",
-        description: `You have reached the daily limit of ${rateLimitData?.daily_limit || 5} document analyses. Please try again after ${resetDate}.`,
+        description: `This IP address has reached the daily limit of ${rateLimitData.daily_limit} document analyses. Please try again after ${resetDate}.`,
         variant: "destructive"
       });
       return;
     }
 
-    // Check if user has enough remaining analyses for selected files
-    if (formData.files.length > rateLimitData.remaining) {
+    // Check if there are enough remaining analyses for selected files
+    if (rateLimitData && formData.files.length > rateLimitData.remaining) {
       toast({
         title: "Insufficient remaining analyses",
-        description: `You have ${rateLimitData.remaining} analyses remaining, but selected ${formData.files.length} files. Please select fewer files or try again tomorrow.`,
+        description: `This IP address has ${rateLimitData.remaining} analyses remaining, but you selected ${formData.files.length} files. Please select fewer files or try again later.`,
         variant: "destructive"
       });
       return;
@@ -193,10 +199,10 @@ export function ContractUploadSection() {
         if (!response.ok) {
           const errorData = await response.json();
           
-          // Handle specific rate limit error
+          // Handle IP-based rate limit error
           if (response.status === 429 || errorData.error === "Rate limit exceeded") {
             const retryAfter = errorData.retry_after ? Math.ceil(errorData.retry_after / 3600) : 24;
-            throw new Error(`Rate limit exceeded: ${errorData.message || 'Daily limit reached'}. Please try again in ${retryAfter} hours.`);
+            throw new Error(`IP rate limit exceeded: ${errorData.message || 'Daily limit reached for this IP address'}. Please try again in ${retryAfter} hours.`);
           }
           
           throw new Error(errorData.detail || errorData.message || `Upload failed for ${file.name}`);
@@ -218,8 +224,8 @@ export function ContractUploadSection() {
         description: `Successfully analyzed ${uploadResults.length} contract(s).`,
       });
 
-      // Update rate limit info after successful upload
-      await checkRateLimit();
+      // Update IP rate limit info after successful upload
+      await checkIPRateLimit();
 
       // Reset form
       setFormData({ files: [], industry: '' });
@@ -278,17 +284,22 @@ export function ContractUploadSection() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Rate Limit Info */}
+                {/* IP Rate Limit Info */}
                 {rateLimitInfo && (
                   <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                          Daily Analysis Limit
+                          Daily Analysis Limit (IP-based)
                         </p>
                         <p className="text-xs text-blue-600 dark:text-blue-400">
-                          {rateLimitInfo.remaining} of {rateLimitInfo.daily_limit} analyses remaining
+                          {rateLimitInfo.remaining} of {rateLimitInfo.daily_limit} analyses remaining for this IP
                         </p>
+                        {rateLimitInfo.ip_address && (
+                          <p className="text-xs text-blue-500 dark:text-blue-400 mt-1">
+                            IP: {rateLimitInfo.ip_address}
+                          </p>
+                        )}
                       </div>
                       <div className="text-right">
                         <div className="w-20 h-2 bg-blue-200 dark:bg-blue-800 rounded-full">
@@ -304,7 +315,7 @@ export function ContractUploadSection() {
                     </div>
                     {rateLimitInfo.remaining === 0 && (
                       <p className="text-xs text-red-600 dark:text-red-400 mt-2">
-                        Daily limit reached. Please try again tomorrow.
+                        Daily limit reached for this IP address. Please try again tomorrow.
                       </p>
                     )}
                   </div>
@@ -423,7 +434,7 @@ export function ContractUploadSection() {
                   
                   {rateLimitInfo && formData.files.length > rateLimitInfo.remaining && (
                     <p className="text-xs text-red-600 dark:text-red-400 text-center mt-2">
-                      You can only analyze {rateLimitInfo.remaining} more documents today. Please select fewer files.
+                      You can only analyze {rateLimitInfo.remaining} more documents from this IP today. Please select fewer files.
                     </p>
                   )}
                 </div>
