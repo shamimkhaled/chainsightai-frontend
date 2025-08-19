@@ -2,13 +2,16 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, FileText, Building2, Loader2, X, AlertTriangle, CheckCircle, Info, Eye, Download } from 'lucide-react';
+import { Upload, FileText, Loader2, X, AlertTriangle, CheckCircle, Info, Download, Clock, Star, Target, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 
 interface UploadFormData {
   files: File[];
@@ -80,10 +83,15 @@ export function ContractUploadSection() {
     industry: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
   const [isCheckingRateLimit, setIsCheckingRateLimit] = useState(false);
   const [rateLimitInfo, setRateLimitInfo] = useState<IPRateLimitInfo | null>(null);
   const [results, setResults] = useState<ContractResult[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [selectedRecommendations, setSelectedRecommendations] = useState<{[key: string]: boolean}>({});
+  const [selectAllByPriority, setSelectAllByPriority] = useState<{[key: number]: boolean}>({});
+  const [isDownloading, setIsDownloading] = useState(false);
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,7 +111,6 @@ export function ContractUploadSection() {
   };
 
   useEffect(() => {
-    // Check IP rate limit when component mounts
     checkIPRateLimit();
   }, []);
 
@@ -114,7 +121,6 @@ export function ContractUploadSection() {
         method: 'GET',
         headers: {
           'accept': 'application/json',
-          // Let the browser automatically include the client IP
         }
       });
 
@@ -122,62 +128,53 @@ export function ContractUploadSection() {
         const rateLimitData = await response.json();
         setRateLimitInfo(rateLimitData);
         return rateLimitData;
-      } else {
-        console.error('Failed to check IP rate limit:', response.status);
-        // Handle rate limit check failure gracefully
-        return null;
       }
     } catch (error) {
       console.error('Error checking IP rate limit:', error);
-      // Don't block the user if rate limit check fails
       return null;
     } finally {
       setIsCheckingRateLimit(false);
     }
   };
 
+  // Simulate processing progress
+  useEffect(() => {
+    if (isProcessing) {
+      const interval = setInterval(() => {
+        setProcessingProgress(prev => {
+          if (prev >= 95) return prev;
+          return prev + Math.random() * 5;
+        });
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [isProcessing]);
+
   const handleSubmit = async () => {
-    if (!formData.files.length) {
+    if (!formData.files.length || !formData.industry) {
       toast({
-        title: "No files selected",
-        description: "Please select at least one contract document to upload.",
+        title: "Missing information",
+        description: "Please select files and industry before uploading.",
         variant: "destructive"
       });
       return;
     }
 
-    if (!formData.industry) {
-      toast({
-        title: "Industry required",
-        description: "Please select an industry for your contract.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Check IP rate limit before proceeding
     const rateLimitData = await checkIPRateLimit();
     if (rateLimitData && !rateLimitData.can_proceed) {
       const resetDate = rateLimitData.reset_time ? new Date(rateLimitData.reset_time).toLocaleString() : 'tomorrow';
       toast({
         title: "Rate limit exceeded",
-        description: `This IP address has reached the daily limit of ${rateLimitData.daily_limit} document analyses. Please try again after ${resetDate}.`,
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Check if there are enough remaining analyses for selected files
-    if (rateLimitData && formData.files.length > rateLimitData.remaining) {
-      toast({
-        title: "Insufficient remaining analyses",
-        description: `This IP address has ${rateLimitData.remaining} analyses remaining, but you selected ${formData.files.length} files. Please select fewer files or try again later.`,
+        description: `This IP address has reached the daily limit. Please try again after ${resetDate}.`,
         variant: "destructive"
       });
       return;
     }
 
     setIsLoading(true);
+    setIsProcessing(true);
+    setProcessingProgress(0);
 
     try {
       const uploadResults: ContractResult[] = [];
@@ -198,13 +195,6 @@ export function ContractUploadSection() {
 
         if (!response.ok) {
           const errorData = await response.json();
-          
-          // Handle IP-based rate limit error
-          if (response.status === 429 || errorData.error === "Rate limit exceeded") {
-            const retryAfter = errorData.retry_after ? Math.ceil(errorData.retry_after / 3600) : 24;
-            throw new Error(`IP rate limit exceeded: ${errorData.message || 'Daily limit reached for this IP address'}. Please try again in ${retryAfter} hours.`);
-          }
-          
           throw new Error(errorData.detail || errorData.message || `Upload failed for ${file.name}`);
         }
 
@@ -212,33 +202,172 @@ export function ContractUploadSection() {
         uploadResults.push(result);
       }
 
-      if (uploadResults.length === 0) {
-        throw new Error('No contracts were uploaded successfully');
-      }
-
+      setProcessingProgress(100);
       setResults(uploadResults);
       setShowResults(true);
+
+      // Initialize selected recommendations and priority groups
+      const initialSelection: {[key: string]: boolean} = {};
+      const priorityGroups: {[key: number]: boolean} = {};
+      
+      uploadResults.forEach(result => {
+        result.analysis_result.document_analysis.improvement_recommendations.forEach((rec, index) => {
+          initialSelection[`${result.id}-${index}`] = false;
+          priorityGroups[rec.priority] = false;
+        });
+      });
+      
+      setSelectedRecommendations(initialSelection);
+      setSelectAllByPriority(priorityGroups);
 
       toast({
         title: "Analysis Complete!",
         description: `Successfully analyzed ${uploadResults.length} contract(s).`,
       });
 
-      // Update IP rate limit info after successful upload
       await checkIPRateLimit();
-
-      // Reset form
       setFormData({ files: [], industry: '' });
       
     } catch (error) {
       console.error('Upload error:', error);
       toast({
         title: "Upload failed",
-        description: error instanceof Error ? error.message : "There was an error uploading your contracts. Please try again.",
+        description: error instanceof Error ? error.message : "There was an error uploading your contracts.",
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
+      setIsProcessing(false);
+      setProcessingProgress(0);
+    }
+  };
+
+  const handleRecommendationToggle = (resultId: string, index: number) => {
+    const key = `${resultId}-${index}`;
+    setSelectedRecommendations(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const handleSelectAllByPriority = (priority: number, checked: boolean) => {
+    setSelectAllByPriority(prev => ({ ...prev, [priority]: checked }));
+    
+    const updates: {[key: string]: boolean} = {};
+    results.forEach(result => {
+      result.analysis_result.document_analysis.improvement_recommendations.forEach((rec, index) => {
+        if (rec.priority === priority) {
+          updates[`${result.id}-${index}`] = checked;
+        }
+      });
+    });
+    
+    setSelectedRecommendations(prev => ({ ...prev, ...updates }));
+  };
+
+  const downloadResults = async (format: 'pdf' | 'doc') => {
+    setIsDownloading(true);
+    
+    try {
+      // Create filtered data with only selected recommendations
+      const selectedData = results.map(result => {
+        const selectedRecs = result.analysis_result.document_analysis.improvement_recommendations
+          .filter((_, index) => selectedRecommendations[`${result.id}-${index}`]);
+        
+        return {
+          ...result,
+          analysis_result: {
+            ...result.analysis_result,
+            document_analysis: {
+              ...result.analysis_result.document_analysis,
+              improvement_recommendations: selectedRecs
+            }
+          }
+        };
+      });
+
+      // Backend API call for professional PDF/DOC generation
+      const response = await fetch(`/api/contracts/download`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contracts: selectedData,
+          format: format,
+          include_sections: {
+            executive_summary: true,
+            risk_assessment: true,
+            missing_clauses: true,
+            improvement_recommendations: true,
+            compliance_check: true
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+
+      // Handle file download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const contentDisposition = response.headers.get('Content-Disposition');
+      const filename = contentDisposition 
+        ? contentDisposition.split('filename=')[1].replace(/"/g, '')
+        : `contract-analysis-${Date.now()}.${format}`;
+        
+      link.download = filename;
+      link.click();
+      
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Download Complete",
+        description: `Your ${format.toUpperCase()} report with selected recommendations has been downloaded.`,
+      });
+      
+    } catch (error) {
+      // Fallback to frontend JSON download if backend not available
+      console.warn('Backend download failed, using fallback:', error);
+      
+      const selectedData = results.map(result => {
+        const selectedRecs = result.analysis_result.document_analysis.improvement_recommendations
+          .filter((_, index) => selectedRecommendations[`${result.id}-${index}`]);
+        
+        return {
+          ...result,
+          analysis_result: {
+            ...result.analysis_result,
+            document_analysis: {
+              ...result.analysis_result.document_analysis,
+              improvement_recommendations: selectedRecs
+            }
+          }
+        };
+      });
+
+      const dataStr = JSON.stringify(selectedData, null, 2);
+      const dataBlob = new Blob([dataStr], {type: 'application/json'});
+      const url = URL.createObjectURL(dataBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `contract-analysis-${format}-${Date.now()}.json`;
+      link.click();
+      
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download Complete (JSON)",
+        description: `Your analysis results with selected recommendations have been downloaded as JSON. Backend ${format.toUpperCase()} generation coming soon!`,
+      });
+      
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -268,9 +397,35 @@ export function ContractUploadSection() {
     return <CheckCircle className="w-4 h-4" />;
   };
 
+  const getPriorityIcon = (priority: number) => {
+    if (priority === 1) return <Star className="w-4 h-4 text-red-500" />;
+    if (priority === 2) return <Target className="w-4 h-4 text-orange-500" />;
+    return <Zap className="w-4 h-4 text-blue-500" />;
+  };
+
+  const getPriorityColor = (priority: number) => {
+    if (priority === 1) return "from-red-500 to-red-600";
+    if (priority === 2) return "from-orange-500 to-orange-600";
+    return "from-blue-500 to-blue-600";
+  };
+
+  const getSelectedCount = () => {
+    return Object.values(selectedRecommendations).filter(Boolean).length;
+  };
+
+  const getPriorityGroups = () => {
+    const groups: {[key: number]: number} = {};
+    results.forEach(result => {
+      result.analysis_result.document_analysis.improvement_recommendations.forEach(rec => {
+        groups[rec.priority] = (groups[rec.priority] || 0) + 1;
+      });
+    });
+    return groups;
+  };
+
   return (
     <>
-      <section className="py-16 bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700">
+      <section id="contract-upload-section" className="py-16 bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto">
             <Card className="border-0 shadow-xl">
@@ -278,28 +433,23 @@ export function ContractUploadSection() {
                 <div className="mx-auto w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mb-4">
                   <FileText className="w-6 h-6 text-white" />
                 </div>
-                <CardTitle className="text-2xl">Upload Contract Documents</CardTitle>
+                <CardTitle className="text-2xl">Professional Contract Analysis</CardTitle>
                 <CardDescription>
-                  Upload your contract documents or images and select the relevant industry for processing.
+                  Upload your contract documents and get comprehensive AI-powered risk analysis with selective reporting
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {/* IP Rate Limit Info */}
+                {/* Rate Limit Info */}
                 {rateLimitInfo && (
                   <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                          Daily Analysis Limit (IP-based)
+                          Daily Analysis Limit
                         </p>
                         <p className="text-xs text-blue-600 dark:text-blue-400">
-                          {rateLimitInfo.remaining} of {rateLimitInfo.daily_limit} analyses remaining for this IP
+                          {rateLimitInfo.remaining} of {rateLimitInfo.daily_limit} analyses remaining
                         </p>
-                        {rateLimitInfo.ip_address && (
-                          <p className="text-xs text-blue-500 dark:text-blue-400 mt-1">
-                            IP: {rateLimitInfo.ip_address}
-                          </p>
-                        )}
                       </div>
                       <div className="text-right">
                         <div className="w-20 h-2 bg-blue-200 dark:bg-blue-800 rounded-full">
@@ -308,16 +458,50 @@ export function ContractUploadSection() {
                             style={{ width: `${(rateLimitInfo.remaining / rateLimitInfo.daily_limit) * 100}%` }}
                           ></div>
                         </div>
-                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                          Resets at midnight
-                        </p>
                       </div>
                     </div>
-                    {rateLimitInfo.remaining === 0 && (
-                      <p className="text-xs text-red-600 dark:text-red-400 mt-2">
-                        Daily limit reached for this IP address. Please try again tomorrow.
-                      </p>
-                    )}
+                  </div>
+                )}
+
+                {/* Processing State */}
+                {isProcessing && (
+                  <div className="mb-6 p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="text-center space-y-4">
+                      <div className="flex justify-center">
+                        <div className="relative">
+                          <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Clock className="w-6 h-6 text-blue-600" />
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                          Analyzing Your Contract
+                        </h3>
+                        <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
+                          Our AI is performing deep contract analysis...
+                        </p>
+                        <Progress value={processingProgress} className="w-full" />
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                          {Math.round(processingProgress)}% Complete
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 text-xs text-blue-600 dark:text-blue-400">
+                        <div className="flex items-center justify-center space-x-1">
+                          <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                          <span>Scanning clauses</span>
+                        </div>
+                        <div className="flex items-center justify-center space-x-1">
+                          <div className="w-2 h-2 bg-purple-600 rounded-full animate-pulse delay-100"></div>
+                          <span>Risk assessment</span>
+                        </div>
+                        <div className="flex items-center justify-center space-x-1">
+                          <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse delay-200"></div>
+                          <span>Generating report</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
                 
@@ -334,6 +518,7 @@ export function ContractUploadSection() {
                         onChange={handleFileChange}
                         className="hidden"
                         id="contract-upload"
+                        disabled={isProcessing}
                       />
                       <label
                         htmlFor="contract-upload"
@@ -369,6 +554,7 @@ export function ContractUploadSection() {
                                   size="sm"
                                   className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/20"
                                   onClick={() => handleRemoveFile(index)}
+                                  disabled={isProcessing}
                                 >
                                   <X className="w-3 h-3" />
                                 </Button>
@@ -384,7 +570,7 @@ export function ContractUploadSection() {
                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                       Industry
                     </label>
-                    <Select onValueChange={handleIndustryChange} value={formData.industry}>
+                    <Select onValueChange={handleIndustryChange} value={formData.industry} disabled={isProcessing}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select industry" />
                       </SelectTrigger>
@@ -401,18 +587,23 @@ export function ContractUploadSection() {
                     onClick={handleSubmit}
                     disabled={
                       isLoading || 
+                      isProcessing ||
                       isCheckingRateLimit || 
                       !formData.files.length || 
                       !formData.industry || 
-                      (rateLimitInfo && !rateLimitInfo.can_proceed) ||
-                      (rateLimitInfo && formData.files.length > rateLimitInfo.remaining)
+                      (rateLimitInfo && !rateLimitInfo.can_proceed)
                     }
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white h-12"
                   >
-                    {isLoading ? (
+                    {isProcessing ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Analyzing Contracts...
+                      </>
+                    ) : isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
                       </>
                     ) : isCheckingRateLimit ? (
                       <>
@@ -423,20 +614,9 @@ export function ContractUploadSection() {
                       <>
                         <Upload className="w-4 h-4 mr-2" />
                         Upload & Analyze Contracts
-                        {rateLimitInfo && formData.files.length > 0 && (
-                          <span className="ml-2 text-xs">
-                            ({formData.files.length}/{rateLimitInfo.remaining})
-                          </span>
-                        )}
                       </>
                     )}
                   </Button>
-                  
-                  {rateLimitInfo && formData.files.length > rateLimitInfo.remaining && (
-                    <p className="text-xs text-red-600 dark:text-red-400 text-center mt-2">
-                      You can only analyze {rateLimitInfo.remaining} more documents from this IP today. Please select fewer files.
-                    </p>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -444,21 +624,93 @@ export function ContractUploadSection() {
         </div>
       </section>
 
-      {/* Results Modal */}
+      {/* Enhanced Results Modal with Dynamic Selection */}
       <Dialog open={showResults} onOpenChange={setShowResults}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
+        <DialogContent className="max-w-7xl max-h-[95vh]">
           <DialogHeader>
-            <DialogTitle className="text-2xl">Contract Analysis Results</DialogTitle>
-            <DialogDescription>
-              Detailed analysis and risk assessment for your uploaded contracts
-            </DialogDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-2xl">Contract Analysis Results</DialogTitle>
+                <DialogDescription>
+                  Select improvement recommendations to include in your professional report
+                </DialogDescription>
+              </div>
+              <div className="flex gap-2">
+                <div className="flex items-center gap-2 mr-4">
+                  <Badge variant="outline" className="bg-green-50 text-green-700">
+                    {getSelectedCount()} selected
+                  </Badge>
+                </div>
+                <Button 
+                  onClick={() => downloadResults('pdf')}
+                  disabled={isDownloading || getSelectedCount() === 0}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  size="sm"
+                >
+                  {isDownloading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  Download PDF
+                </Button>
+                <Button 
+                  onClick={() => downloadResults('doc')}
+                  disabled={isDownloading || getSelectedCount() === 0}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  size="sm"
+                >
+                  {isDownloading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  Download DOC
+                </Button>
+              </div>
+            </div>
           </DialogHeader>
           
-          <ScrollArea className="max-h-[60vh] pr-4">
+          <ScrollArea className="max-h-[75vh] pr-4">
             <div className="space-y-6">
+              {/* Priority Selection Controls */}
+              <Card className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border-blue-200 dark:border-blue-800">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Target className="w-5 h-5 text-blue-600" />
+                    Smart Selection by Priority
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {Object.entries(getPriorityGroups()).sort(([a], [b]) => Number(a) - Number(b)).map(([priority, count]) => (
+                      <div key={priority} className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-lg bg-gradient-to-r ${getPriorityColor(Number(priority))} flex items-center justify-center`}>
+                            {getPriorityIcon(Number(priority))}
+                          </div>
+                          <div>
+                            <p className="font-medium text-slate-900 dark:text-white">
+                              Priority {priority}
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              {count} recommendations
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={selectAllByPriority[Number(priority)] || false}
+                          onCheckedChange={(checked) => handleSelectAllByPriority(Number(priority), checked)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
               {results.map((result, index) => (
-                <div key={index} className="border rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-4">
+                <div key={index} className="border rounded-lg p-6 bg-white dark:bg-slate-800">
+                  <div className="flex items-center justify-between mb-6">
                     <h3 className="text-lg font-semibold flex items-center gap-2">
                       <FileText className="w-5 h-5" />
                       {result.original_filename}
@@ -477,146 +729,96 @@ export function ContractUploadSection() {
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {/* Executive Summary */}
-                    <div className="space-y-4">
-                      <h4 className="font-semibold text-base">Executive Summary</h4>
-                      <div className="space-y-3">
-                        <div>
-                          <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Priority Level:</span>
-                          <p className="text-sm mt-1">{result.analysis_result.document_analysis.executive_summary.priority_level}</p>
-                        </div>
-                        
-                        <div>
-                          <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Critical Issues:</span>
-                          <p className="text-sm mt-1">{result.analysis_result.document_analysis.executive_summary.critical_issues_count} issues identified</p>
-                        </div>
-
-                        <div>
-                          <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Missing Clauses:</span>
-                          <p className="text-sm mt-1">{result.analysis_result.document_analysis.executive_summary.missing_clauses_count} missing critical clauses</p>
-                        </div>
-                      </div>
+                  {/* Improvement Recommendations with Enhanced Selection */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-base flex items-center gap-2">
+                        <Target className="w-5 h-5 text-blue-600" />
+                        Improvement Recommendations
+                      </h4>
+                      <p className="text-sm text-slate-500">Select recommendations for your custom report</p>
                     </div>
-
-                    {/* Risk Assessment */}
-                    <div className="space-y-4">
-                      <h4 className="font-semibold text-base">Risk Assessment</h4>
-                      
-                      {/* High Risk Issues */}
-                      {result.analysis_result.document_analysis.risk_assessment.filter(risk => risk.severity === 'High').length > 0 && (
-                        <div>
-                          <h5 className="text-sm font-medium text-red-600 dark:text-red-400 mb-2">High Risk Issues</h5>
-                          <div className="space-y-2">
-                            {result.analysis_result.document_analysis.risk_assessment.filter(risk => risk.severity === 'High').map((risk, idx) => (
-                              <div key={idx} className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                                <p className="text-sm font-medium text-red-800 dark:text-red-300">{risk.category}</p>
-                                <p className="text-xs text-red-600 dark:text-red-400 mt-1">{risk.description}</p>
-                                <p className="text-xs text-red-700 dark:text-red-300 mt-1 font-medium">Impact: {risk.potential_impact}</p>
+                    
+                    <div className="space-y-3">
+                      {result.analysis_result.document_analysis.improvement_recommendations
+                        .sort((a, b) => a.priority - b.priority)
+                        .map((rec, recIndex) => {
+                          const originalIndex = result.analysis_result.document_analysis.improvement_recommendations.indexOf(rec);
+                          const isSelected = selectedRecommendations[`${result.id}-${originalIndex}`] || false;
+                          
+                          return (
+                            <div 
+                              key={originalIndex} 
+                              className={`border rounded-lg p-4 transition-all duration-200 ${
+                                isSelected 
+                                  ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 shadow-md' 
+                                  : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-600'
+                              }`}
+                            >
+                              <div className="flex items-start space-x-3">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => handleRecommendationToggle(result.id, originalIndex)}
+                                  className="mt-1"
+                                />
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <div className={`w-6 h-6 rounded-lg bg-gradient-to-r ${getPriorityColor(rec.priority)} flex items-center justify-center`}>
+                                      {getPriorityIcon(rec.priority)}
+                                    </div>
+                                    <Badge variant="secondary" className="text-xs">
+                                      Priority {rec.priority}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                      {rec.category}
+                                    </Badge>
+                                    {isSelected && (
+                                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs">
+                                        ✓ Selected
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <h5 className="font-medium text-sm mb-2 text-slate-900 dark:text-white">
+                                    {rec.description}
+                                  </h5>
+                                  <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
+                                    <strong>Justification:</strong> {rec.justification}
+                                  </p>
+                                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                                    <strong>Implementation:</strong> {rec.suggested_implementation}
+                                  </p>
+                                </div>
                               </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Medium Risk Issues */}
-                      {result.analysis_result.document_analysis.risk_assessment.filter(risk => risk.severity === 'Medium').length > 0 && (
-                        <div>
-                          <h5 className="text-sm font-medium text-yellow-600 dark:text-yellow-400 mb-2">Medium Risk Issues</h5>
-                          <div className="space-y-2">
-                            {result.analysis_result.document_analysis.risk_assessment.filter(risk => risk.severity === 'Medium').map((risk, idx) => (
-                              <div key={idx} className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">{risk.category}</p>
-                                <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">{risk.description}</p>
-                                <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium">Impact: {risk.potential_impact}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Low Risk Issues */}
-                      {result.analysis_result.document_analysis.risk_assessment.filter(risk => risk.severity === 'Low').length > 0 && (
-                        <div>
-                          <h5 className="text-sm font-medium text-green-600 dark:text-green-400 mb-2">Low Risk Issues</h5>
-                          <div className="space-y-2">
-                            {result.analysis_result.document_analysis.risk_assessment.filter(risk => risk.severity === 'Low').slice(0, 3).map((risk, idx) => (
-                              <div key={idx} className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                                <p className="text-sm font-medium text-green-800 dark:text-green-300">{risk.category}</p>
-                                <p className="text-xs text-green-600 dark:text-green-400 mt-1">{risk.description}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                            </div>
+                          );
+                        })}
                     </div>
                   </div>
 
                   <Separator className="my-6" />
 
-                  {/* Missing Critical Clauses & Recommendations */}
+                  {/* Executive Summary and Compliance (Always Included) */}
                   <div className="grid md:grid-cols-2 gap-6">
-                    {/* Missing Critical Clauses */}
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-base">Missing Critical Clauses</h4>
-                      
-                      {result.analysis_result.document_analysis.missing_critical_clauses.length > 0 && (
-                        <div className="space-y-2">
-                          {result.analysis_result.document_analysis.missing_critical_clauses.map((clause, idx) => (
-                            <div key={idx} className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                              <p className="text-sm font-medium text-orange-800 dark:text-orange-300">{clause.clause_name}</p>
-                              <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">{clause.reason}</p>
-                              <span className="text-xs px-2 py-1 bg-orange-200 dark:bg-orange-800 text-orange-800 dark:text-orange-200 rounded-full mt-2 inline-block">
-                                {clause.importance}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Improvement Recommendations */}
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-base">Improvement Recommendations</h4>
-                      
-                      {result.analysis_result.document_analysis.improvement_recommendations.length > 0 && (
-                        <div className="space-y-2">
-                          {result.analysis_result.document_analysis.improvement_recommendations.slice(0, 5).map((rec, idx) => (
-                            <div key={idx} className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-full">
-                                  Priority {rec.priority}
-                                </span>
-                                <span className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full">
-                                  {rec.category}
-                                </span>
-                              </div>
-                              <p className="text-sm font-medium text-blue-800 dark:text-blue-300">{rec.description}</p>
-                              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">{rec.justification}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <Separator className="my-6" />
-
-                  {/* Compliance Check */}
-                  <div>
-                    <h4 className="font-semibold text-base mb-3">Compliance Assessment</h4>
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                        <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Industry Standards:</span>
-                        <p className="text-sm mt-1 capitalize text-slate-700 dark:text-slate-300">{result.analysis_result.document_analysis.compliance_check.industry_standards}</p>
+                    <div>
+                      <h4 className="font-semibold text-base mb-3 flex items-center gap-2">
+                        <Info className="w-4 h-4 text-blue-600" />
+                        Executive Summary
+                      </h4>
+                      <div className="space-y-2 text-sm">
+                        <p><strong>Priority Level:</strong> {result.analysis_result.document_analysis.executive_summary.priority_level}</p>
+                        <p><strong>Critical Issues:</strong> {result.analysis_result.document_analysis.executive_summary.critical_issues_count}</p>
+                        <p><strong>Missing Clauses:</strong> {result.analysis_result.document_analysis.executive_summary.missing_clauses_count}</p>
                       </div>
-                      <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                        <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Regulatory Requirements:</span>
-                        <p className="text-sm mt-1 text-slate-700 dark:text-slate-300">{result.analysis_result.document_analysis.compliance_check.regulatory_requirements.slice(0, 100)}...</p>
-                      </div>
-                      <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                        <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Best Practices:</span>
-                        <p className="text-sm mt-1 text-slate-700 dark:text-slate-300">{result.analysis_result.document_analysis.compliance_check.best_practices.slice(0, 100)}...</p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-semibold text-base mb-3 flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        Compliance Assessment
+                      </h4>
+                      <div className="space-y-2 text-sm">
+                        <p><strong>Industry Standards:</strong> {result.analysis_result.document_analysis.compliance_check.industry_standards}</p>
+                        <p><strong>Regulatory:</strong> {result.analysis_result.document_analysis.compliance_check.regulatory_requirements.slice(0, 100)}...</p>
                       </div>
                     </div>
                   </div>
@@ -625,10 +827,19 @@ export function ContractUploadSection() {
             </div>
           </ScrollArea>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setShowResults(false)}>
-              Close
-            </Button>
+          <div className="flex justify-between items-center pt-4 border-t">
+            <div className="text-sm text-slate-600 dark:text-slate-400">
+              {getSelectedCount() === 0 ? (
+                "Select recommendations to enable download"
+              ) : (
+                `${getSelectedCount()} recommendations selected for your custom report`
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowResults(false)}>
+                Close
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
