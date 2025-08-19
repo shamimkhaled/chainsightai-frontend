@@ -27,16 +27,16 @@ const founders = [
     ],
   },
   {
-    name: "Steve Johnson",
-    image: "/founder3.jpg",
-    position: "COO & Co-Founder",
-    description:
-      "Founder Three brings operational excellence and strategic foresight. With a track record of leading global operations, he ensures efficient execution of business objectives and team synergy.",
-    workHistory: [
-      "VP of Operations at TradeGrid Corp. (2012–2022)",
-      "Scaled ops across 3 continents with 200+ team members",
-      "Implemented AI-based optimization in customs clearance",
-    ],
+    // name: "Steve Johnson - Arman",
+    // image: "/founder3.jpg",
+    // position: "COO & Co-Founder",
+    // description:
+    //   "Founder Three brings operational excellence and strategic foresight. With a track record of leading global operations, he ensures efficient execution of business objectives and team synergy.",
+    // workHistory: [
+    //   "VP of Operations at TradeGrid Corp. (2012–2022)",
+    //   "Scaled ops across 3 continents with 200+ team members",
+    //   "Implemented AI-based optimization in customs clearance",
+    // ],
   },
 ];
 
@@ -47,6 +47,8 @@ export default function FoundersSection() {
         <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-12 text-center">
           Meet the Founders
         </h2>
+
+        {/* Founder 1 */}
         <div className="flex flex-col md:flex-row items-center mb-12 bg-slate-50 dark:bg-slate-800 rounded-2xl p-6 shadow-md transition hover:shadow-lg">
           {/* Founder Image */}
           <img
@@ -167,17 +169,20 @@ export default function FoundersSection() {
             </div>
           </div>
         </div>
-        <div className="flex flex-col md:flex-row items-center mb-12 bg-slate-50 dark:bg-slate-800 rounded-2xl p-6 shadow-md transition hover:shadow-lg">
-          {/* Founder Image */}
-          <img
+
+        {/* Founder 3 */}
+        {/* <div className="flex flex-col md:flex-row items-center mb-12 bg-slate-50 dark:bg-slate-800 rounded-2xl p-6 shadow-md transition hover:shadow-lg"> */}
+          {/* Founder Image  */}
+          {/* <img
             src="/founder3.jpg"
             alt="Founder 3"
             className="w-40 h-40 aspect-square rounded-full object-cover mb-4 md:mb-0 md:mr-8"
-          />
+          /> */}
 
           {/* Content */}
-          <div>
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
+          {/* <div> */}
+
+            {/* <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
               {founders[2].name}
             </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-2">
@@ -192,7 +197,6 @@ export default function FoundersSection() {
               operational efficiency and resilience.
             </p>
 
-            {/* Key Highlights */}
             <div className="mb-4">
               <h4 className="text-slate-800 dark:text-white font-semibold mb-1 flex items-center gap-2">
                 <Lightbulb className="w-4 h-4" /> Areas of Expertise
@@ -206,7 +210,6 @@ export default function FoundersSection() {
               </ul>
             </div>
 
-            {/* Contact / Social */}
             <div className="flex items-center space-x-4 mt-4">
               <a
                 href="mailto:founder@example.com"
@@ -225,9 +228,12 @@ export default function FoundersSection() {
               <span className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
                 <MapPin className="w-4 h-4" /> Texas, USA
               </span>
-            </div>
-          </div>
-        </div>
+            </div> */}
+
+          {/* </div> */}
+
+        {/* </div> */}
+
       </div>
     </section>
   );
