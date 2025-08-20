@@ -1,15 +1,13 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Download, Target, Star, Zap, FileText, AlertTriangle, Info, CheckCircle, Eye } from 'lucide-react';
+import { Loader2, Download, Target, Star, Zap, FileText, AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
 
 interface ResultsModalProps {
   open: boolean;
@@ -21,7 +19,6 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
   const [selectedRecommendations, setSelectedRecommendations] = useState<{[key: string]: boolean}>({});
   const [selectAllByPriority, setSelectAllByPriority] = useState<{[key: number]: boolean}>({});
   const [isDownloading, setIsDownloading] = useState(false);
-  const [showFullCompliance, setShowFullCompliance] = useState<{[key: string]: boolean}>({});
   const { toast } = useToast();
 
   const getRiskBadgeVariant = (riskScore: number) => {
@@ -89,10 +86,6 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
     });
     
     setSelectedRecommendations(prev => ({ ...prev, ...updates }));
-  };
-
-  const toggleFullCompliance = (key: string) => {
-    setShowFullCompliance(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const downloadResults = async (format: 'pdf' | 'doc') => {
@@ -372,7 +365,7 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
           </div>
 
           <div class="section">
-            <div class="section-title">Risk Assessment</div>
+            <div className="section-title">Risk Assessment</div>
       `;
 
       ['High', 'Medium', 'Low'].forEach(severity => {
@@ -503,7 +496,7 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                       {getRiskLevel(result.analysis_result.document_analysis.overall_risk_score)}
                     </Badge>
                     <Badge variant="outline">
-                      Score: ${result.analysis_result.document_analysis.overall_risk_score}/10
+                      Score: {result.analysis_result.document_analysis.overall_risk_score}/10
                     </Badge>
                   </div>
                 </div>
@@ -515,15 +508,15 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                     <div className="space-y-3">
                       <div>
                         <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Priority Level:</span>
-                        <p className="text-sm mt-1">${result.analysis_result.document_analysis.executive_summary.priority_level}</p>
+                        <p className="text-sm mt-1">{result.analysis_result.document_analysis.executive_summary.priority_level}</p>
                       </div>
                       <div>
                         <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Critical Issues:</span>
-                        <p className="text-sm mt-1">${result.analysis_result.document_analysis.executive_summary.critical_issues_count} issues identified</p>
+                        <p className="text-sm mt-1">{result.analysis_result.document_analysis.executive_summary.critical_issues_count} issues identified</p>
                       </div>
                       <div>
                         <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Missing Clauses:</span>
-                        <p className="text-sm mt-1">${result.analysis_result.document_analysis.executive_summary.missing_clauses_count} missing critical clauses</p>
+                        <p className="text-sm mt-1">{result.analysis_result.document_analysis.executive_summary.missing_clauses_count} missing critical clauses</p>
                       </div>
                     </div>
                   </div>
@@ -537,9 +530,9 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                         <div className="space-y-2">
                           {result.analysis_result.document_analysis.risk_assessment.filter(risk => risk.severity === 'High').map((risk, idx) => (
                             <div key={idx} className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                              <p className="text-sm font-medium text-red-800 dark:text-red-300">${risk.category}</p>
-                              <p className="text-xs text-red-600 dark:text-red-400 mt-1">${risk.description}</p>
-                              <p className="text-xs text-red-700 dark:text-red-300 mt-1 font-medium">Impact: ${risk.potential_impact}</p>
+                              <p className="text-sm font-medium text-red-800 dark:text-red-300">{risk.category}</p>
+                              <p className="text-xs text-red-600 dark:text-red-400 mt-1">{risk.description}</p>
+                              <p className="text-xs text-red-700 dark:text-red-300 mt-1 font-medium">Impact: {risk.potential_impact}</p>
                             </div>
                           ))}
                         </div>
@@ -551,9 +544,9 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                         <div className="space-y-2">
                           {result.analysis_result.document_analysis.risk_assessment.filter(risk => risk.severity === 'Medium').map((risk, idx) => (
                             <div key={idx} className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                              <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">${risk.category}</p>
-                              <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">${risk.description}</p>
-                              <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium">Impact: ${risk.potential_impact}</p>
+                              <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">{risk.category}</p>
+                              <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">{risk.description}</p>
+                              <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium">Impact: {risk.potential_impact}</p>
                             </div>
                           ))}
                         </div>
@@ -565,8 +558,8 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                         <div className="space-y-2">
                           {result.analysis_result.document_analysis.risk_assessment.filter(risk => risk.severity === 'Low').slice(0, 3).map((risk, idx) => (
                             <div key={idx} className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                              <p className="text-sm font-medium text-green-800 dark:text-green-300">${risk.category}</p>
-                              <p className="text-xs text-green-600 dark:text-green-400 mt-1">${risk.description}</p>
+                              <p className="text-sm font-medium text-green-800 dark:text-green-300">{risk.category}</p>
+                              <p className="text-xs text-green-600 dark:text-green-400 mt-1">{risk.description}</p>
                             </div>
                           ))}
                         </div>
@@ -586,10 +579,10 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                       <div className="space-y-2">
                         {result.analysis_result.document_analysis.missing_critical_clauses.map((clause, idx) => (
                           <div key={idx} className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                            <p className="text-sm font-medium text-orange-800 dark:text-orange-300">${clause.clause_name}</p>
-                            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">${clause.reason}</p>
+                            <p className="text-sm font-medium text-orange-800 dark:text-orange-300">{clause.clause_name}</p>
+                            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">{clause.reason}</p>
                             <span className="text-xs px-2 py-1 bg-orange-200 dark:bg-orange-800 text-orange-800 dark:text-orange-200 rounded-full mt-2 inline-block">
-                              ${clause.importance}
+                              {clause.importance}
                             </span>
                           </div>
                         ))}
@@ -613,7 +606,7 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                             onCheckedChange={(checked) => handleSelectAllByPriority(Number(priority), checked)}
                             className="scale-75"
                           />
-                          <span>P${priority} (${count})</span>
+                          <span>P{priority} ({count})</span>
                         </div>
                       ))}
                     </div>
@@ -643,10 +636,10 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
                                       <div className={`w-4 h-4 rounded bg-gradient-to-r ${getPriorityColor(rec.priority)} flex items-center justify-center`}>
-                                        <span className="text-xs text-white font-bold">${rec.priority}</span>
+                                        <span className="text-xs text-white font-bold">{rec.priority}</span>
                                       </div>
                                       <span className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full">
-                                        ${rec.category}
+                                        {rec.category}
                                       </span>
                                       {isSelected && (
                                         <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs">
@@ -654,12 +647,12 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                                         </Badge>
                                       )}
                                     </div>
-                                    <p className="text-sm font-medium text-blue-800 dark:text-blue-300">${rec.description}</p>
-                                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">${rec.justification}</p>
+                                    <p className="text-sm font-medium text-blue-800 dark:text-blue-300">{rec.description}</p>
+                                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">{rec.justification}</p>
                                     {rec.suggested_implementation && (
                                       <div className="mt-2">
                                         <p className="text-xs font-medium text-slate-600 dark:text-slate-400">Implementation:</p>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">${rec.suggested_implementation}</p>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{rec.suggested_implementation}</p>
                                       </div>
                                     )}
                                   </div>
@@ -680,120 +673,18 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                 <div>
                   <h4 className="font-semibold text-base mb-3">Compliance Assessment</h4>
                   <div className="grid md:grid-cols-3 gap-4">
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                    <ScrollArea className="max-h-[200px] p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                       <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Industry Standards:</span>
-                      <p className="text-sm mt-1 text-slate-700 dark:text-slate-300">
-                        {result.analysis_result.document_analysis.compliance_check.industry_standards.length > 100 && !showFullCompliance[`${result.id}-industry`]
-                          ? result.analysis_result.document_analysis.compliance_check.industry_standards.slice(0, 100) + '...'
-                          : result.analysis_result.document_analysis.compliance_check.industry_standards}
-                      </p>
-                      {result.analysis_result.document_analysis.compliance_check.industry_standards.length > 100 && (
-                        <Dialog
-                          open={showFullCompliance[`${result.id}-industry`]}
-                          onOpenChange={() => toggleFullCompliance(`${result.id}-industry`)}
-                        >
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="link"
-                              size="sm"
-                              className="mt-1 text-blue-600 dark:text-blue-400"
-                              onClick={() => toggleFullCompliance(`${result.id}-industry`)}
-                            >
-                              <Eye className="w-4 h-4 mr-1" /> Read Full
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Industry Standards</DialogTitle>
-                              <DialogDescription>
-                                Full text of industry standards compliance
-                              </DialogDescription>
-                            </DialogHeader>
-                            <ScrollArea className="max-h-[50vh]">
-                              <p className="text-sm text-slate-700 dark:text-slate-300">
-                                {result.analysis_result.document_analysis.compliance_check.industry_standards}
-                              </p>
-                            </ScrollArea>
-                          </DialogContent>
-                        </Dialog>
-                      )}
-                    </div>
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <p className="text-sm mt-1 text-slate-700 dark:text-slate-300">{result.analysis_result.document_analysis.compliance_check.industry_standards}</p>
+                    </ScrollArea>
+                    <ScrollArea className="max-h-[200px] p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                       <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Regulatory Requirements:</span>
-                      <p className="text-sm mt-1 text-slate-700 dark:text-slate-300">
-                        {result.analysis_result.document_analysis.compliance_check.regulatory_requirements.length > 100 && !showFullCompliance[`${result.id}-regulatory`]
-                          ? result.analysis_result.document_analysis.compliance_check.regulatory_requirements.slice(0, 100) + '...'
-                          : result.analysis_result.document_analysis.compliance_check.regulatory_requirements}
-                      </p>
-                      {result.analysis_result.document_analysis.compliance_check.regulatory_requirements.length > 100 && (
-                        <Dialog
-                          open={showFullCompliance[`${result.id}-regulatory`]}
-                          onOpenChange={() => toggleFullCompliance(`${result.id}-regulatory`)}
-                        >
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="link"
-                              size="sm"
-                              className="mt-1 text-blue-600 dark:text-blue-400"
-                              onClick={() => toggleFullCompliance(`${result.id}-regulatory`)}
-                            >
-                              <Eye className="w-4 h-4 mr-1" /> Read Full
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Regulatory Requirements</DialogTitle>
-                              <DialogDescription>
-                                Full text of regulatory requirements compliance
-                              </DialogDescription>
-                            </DialogHeader>
-                            <ScrollArea className="max-h-[50vh]">
-                              <p className="text-sm text-slate-700 dark:text-slate-300">
-                                {result.analysis_result.document_analysis.compliance_check.regulatory_requirements}
-                              </p>
-                            </ScrollArea>
-                          </DialogContent>
-                        </Dialog>
-                      )}
-                    </div>
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <p className="text-sm mt-1 text-slate-700 dark:text-slate-300">{result.analysis_result.document_analysis.compliance_check.regulatory_requirements}</p>
+                    </ScrollArea>
+                    <ScrollArea className="max-h-[200px] p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                       <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Best Practices:</span>
-                      <p className="text-sm mt-1 text-slate-700 dark:text-slate-300">
-                        {result.analysis_result.document_analysis.compliance_check.best_practices.length > 100 && !showFullCompliance[`${result.id}-best`]
-                          ? result.analysis_result.document_analysis.compliance_check.best_practices.slice(0, 100) + '...'
-                          : result.analysis_result.document_analysis.compliance_check.best_practices}
-                      </p>
-                      {result.analysis_result.document_analysis.compliance_check.best_practices.length > 100 && (
-                        <Dialog
-                          open={showFullCompliance[`${result.id}-best`]}
-                          onOpenChange={() => toggleFullCompliance(`${result.id}-best`)}
-                        >
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="link"
-                              size="sm"
-                              className="mt-1 text-blue-600 dark:text-blue-400"
-                              onClick={() => toggleFullCompliance(`${result.id}-best`)}
-                            >
-                              <Eye className="w-4 h-4 mr-1" /> Read Full
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Best Practices</DialogTitle>
-                              <DialogDescription>
-                                Full text of best practices compliance
-                              </DialogDescription>
-                            </DialogHeader>
-                            <ScrollArea className="max-h-[50vh]">
-                              <p className="text-sm text-slate-700 dark:text-slate-300">
-                                {result.analysis_result.document_analysis.compliance_check.best_practices}
-                              </p>
-                            </ScrollArea>
-                          </DialogContent>
-                        </Dialog>
-                      )}
-                    </div>
+                      <p className="text-sm mt-1 text-slate-700 dark:text-slate-300">{result.analysis_result.document_analysis.compliance_check.best_practices}</p>
+                    </ScrollArea>
                   </div>
                 </div>
               </div>
@@ -811,7 +702,7 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
               )}
             </div>
             <Badge variant="outline" className="bg-green-50 text-green-700">
-              ${getSelectedCount()} selected
+              {getSelectedCount()} selected
             </Badge>
           </div>
           <div className="flex gap-2">
