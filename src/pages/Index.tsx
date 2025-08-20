@@ -8,7 +8,7 @@ import { SolutionSection } from '@/components/sections/SolutionSection';
 import { HowItWorksSection } from '@/components/sections/HowItWorksSection';
 import { CaseStudiesSection } from '@/components/sections/CaseStudiesSection';
 import { BookDemoSection } from '@/components/sections/BookDemoSection';
-import { ContractUploadSection } from '@/components/sections/ContractUploadSection';
+// import { ContractUploadSection } from '@/components/sections/ContractUploadSection';
 import { CTASection } from '@/components/sections/CTASection';
 import { Footer } from '@/components/sections/Footer';
 import FoundersSection from "@/components/sections/FoundersSection";
