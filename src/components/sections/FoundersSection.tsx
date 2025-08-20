@@ -90,12 +90,12 @@ export default function FoundersSection() {
 
             {/* Contact / Social */}
             <div className="flex items-center space-x-4 mt-4">
-              <a
+              {/* <a
                 href="mailto:founder@example.com"
                 className="text-slate-500 hover:text-blue-600 dark:hover:text-blue-400"
               >
                 <Mail className="w-5 h-5" />
-              </a>
+              </a> */}
               <a
                 href="https://www.linkedin.com/in/pratim-lala/"
                 target="_blank"
@@ -147,13 +147,13 @@ export default function FoundersSection() {
 
             {/* Contact / Social Icons */}
             <div className="flex items-center space-x-4 mt-2">
-              <a
+              {/* <a
                 href="mailto:founder2@example.com"
                 className="text-slate-500 hover:text-red-600 dark:hover:text-red-400"
                 aria-label="Email"
               >
                 <Mail className="w-5 h-5" />
-              </a>
+              </a> */}
               <a
                 href="https://www.linkedin.com/in/mashruf-h/"
                 target="_blank"
