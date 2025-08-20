@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -7,10 +7,9 @@ import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Download, Target, Star, Zap, FileText, AlertTriangle, Info, CheckCircle } from 'lucide-react';
+import { Loader2, Download, Target, Star, Zap, FileText, AlertTriangle, Info, CheckCircle, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-// Note: You need to install jsPDF: npm install jspdf @types/jspdf
 
 interface ResultsModalProps {
   open: boolean;
@@ -22,6 +21,7 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
   const [selectedRecommendations, setSelectedRecommendations] = useState<{[key: string]: boolean}>({});
   const [selectAllByPriority, setSelectAllByPriority] = useState<{[key: number]: boolean}>({});
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showFullCompliance, setShowFullCompliance] = useState<{[key: string]: boolean}>({});
   const { toast } = useToast();
 
   const getRiskBadgeVariant = (riskScore: number) => {
@@ -91,14 +91,31 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
     setSelectedRecommendations(prev => ({ ...prev, ...updates }));
   };
 
+  const toggleFullCompliance = (key: string) => {
+    setShowFullCompliance(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   const downloadResults = async (format: 'pdf' | 'doc') => {
     setIsDownloading(true);
     
     try {
+      // Filter results to include only selected recommendations
+      const filteredData = results.map(result => ({
+        ...result,
+        analysis_result: {
+          ...result.analysis_result,
+          document_analysis: {
+            ...result.analysis_result.document_analysis,
+            improvement_recommendations: result.analysis_result.document_analysis.improvement_recommendations
+              .filter((_, index) => selectedRecommendations[`${result.id}-${index}`])
+          }
+        }
+      }));
+
       if (format === 'pdf') {
-        await downloadPDF(results);
+        await downloadPDF(filteredData);
       } else {
-        await downloadDOC(results);
+        await downloadDOC(filteredData);
       }
 
       toast({
@@ -234,10 +251,10 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
         yPosition += 10;
       }
 
-      // Improvement Recommendations
+      // Selected Improvement Recommendations
       pdf.setFontSize(14);
       pdf.setFont(undefined, 'bold');
-      pdf.text('Improvement Recommendations', margin, yPosition);
+      pdf.text('Selected Improvement Recommendations', margin, yPosition);
       yPosition += 10;
 
       const recommendations = result.analysis_result.document_analysis.improvement_recommendations;
@@ -249,12 +266,7 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
           }
           pdf.setFontSize(11);
           pdf.setFont(undefined, 'bold');
-          const isSelected = selectedRecommendations[`${result.id}-${recIndex}`];
-          pdf.text(
-            `${recIndex + 1}. Priority ${rec.priority} - ${rec.category}${isSelected ? ' (Selected)' : ''}`,
-            margin + 5,
-            yPosition
-          );
+          pdf.text(`${recIndex + 1}. Priority ${rec.priority} - ${rec.category}`, margin + 5, yPosition);
           yPosition += 8;
           pdf.setFontSize(10);
           pdf.setFont(undefined, 'normal');
@@ -273,7 +285,7 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
         });
       } else {
         pdf.setFontSize(10);
-        pdf.text('No improvement recommendations available', margin + 5, yPosition);
+        pdf.text('No selected improvement recommendations', margin + 5, yPosition);
         yPosition += 10;
       }
 
@@ -318,7 +330,6 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
             .section { margin-bottom: 20px; }
             .section-title { font-size: 16px; font-weight: bold; color: #444; margin-bottom: 10px; border-bottom: 1px solid #ddd; }
             .recommendation { margin-bottom: 15px; padding: 10px; background: #f9f9f9; border-left: 4px solid #007acc; }
-            .selected { background: #e6f3ff; border-left: 4px solid #005f99; }
             .priority-1 { border-left-color: #dc3545; }
             .priority-2 { border-left-color: #fd7e14; }
             .priority-3 { border-left-color: #007acc; }
@@ -406,26 +417,21 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
           </div>
 
           <div class="section">
-            <div class="section-title">Improvement Recommendations</div>
+            <div class="section-title">Selected Improvement Recommendations</div>
       `;
 
       const recommendations = result.analysis_result.document_analysis.improvement_recommendations;
       if (recommendations.length > 0) {
-        htmlContent += recommendations.map((rec, recIndex) => {
-          const isSelected = selectedRecommendations[`${result.id}-${recIndex}`];
-          return `
-            <div class="recommendation priority-${rec.priority} ${isSelected ? 'selected' : ''}">
-              <div class="rec-header">
-                ${recIndex + 1}. Priority ${rec.priority} - ${rec.category}${isSelected ? ' (Selected)' : ''}
-              </div>
-              <div class="rec-desc">Description: ${rec.description}</div>
-              <div class="rec-just">Justification: ${rec.justification}</div>
-              ${rec.suggested_implementation ? `<div>Implementation: ${rec.suggested_implementation}</div>` : ''}
-            </div>
-          `;
-        }).join('');
+        htmlContent += recommendations.map((rec, recIndex) => `
+          <div class="recommendation priority-${rec.priority}">
+            <div class="rec-header">${recIndex + 1}. Priority ${rec.priority} - ${rec.category}</div>
+            <div class="rec-desc">Description: ${rec.description}</div>
+            <div class="rec-just">Justification: ${rec.justification}</div>
+            ${rec.suggested_implementation ? `<div>Implementation: ${rec.suggested_implementation}</div>` : ''}
+          </div>
+        `).join('');
       } else {
-        htmlContent += '<p>No improvement recommendations available</p>';
+        htmlContent += '<p>No selected improvement recommendations</p>';
       }
 
       htmlContent += `
@@ -497,7 +503,7 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                       {getRiskLevel(result.analysis_result.document_analysis.overall_risk_score)}
                     </Badge>
                     <Badge variant="outline">
-                      Score: {result.analysis_result.document_analysis.overall_risk_score}/10
+                      Score: ${result.analysis_result.document_analysis.overall_risk_score}/10
                     </Badge>
                   </div>
                 </div>
@@ -509,17 +515,15 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                     <div className="space-y-3">
                       <div>
                         <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Priority Level:</span>
-                        <p className="text-sm mt-1">{result.analysis_result.document_analysis.executive_summary.priority_level}</p>
+                        <p className="text-sm mt-1">${result.analysis_result.document_analysis.executive_summary.priority_level}</p>
                       </div>
-                      
                       <div>
                         <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Critical Issues:</span>
-                        <p className="text-sm mt-1">{result.analysis_result.document_analysis.executive_summary.critical_issues_count} issues identified</p>
+                        <p className="text-sm mt-1">${result.analysis_result.document_analysis.executive_summary.critical_issues_count} issues identified</p>
                       </div>
-
                       <div>
                         <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Missing Clauses:</span>
-                        <p className="text-sm mt-1">{result.analysis_result.document_analysis.executive_summary.missing_clauses_count} missing critical clauses</p>
+                        <p className="text-sm mt-1">${result.analysis_result.document_analysis.executive_summary.missing_clauses_count} missing critical clauses</p>
                       </div>
                     </div>
                   </div>
@@ -527,48 +531,42 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                   {/* Risk Assessment */}
                   <div className="space-y-4">
                     <h4 className="font-semibold text-base">Risk Assessment</h4>
-                    
-                    {/* High Risk Issues */}
                     {result.analysis_result.document_analysis.risk_assessment.filter(risk => risk.severity === 'High').length > 0 && (
                       <div>
                         <h5 className="text-sm font-medium text-red-600 dark:text-red-400 mb-2">High Risk Issues</h5>
                         <div className="space-y-2">
                           {result.analysis_result.document_analysis.risk_assessment.filter(risk => risk.severity === 'High').map((risk, idx) => (
                             <div key={idx} className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                              <p className="text-sm font-medium text-red-800 dark:text-red-300">{risk.category}</p>
-                              <p className="text-xs text-red-600 dark:text-red-400 mt-1">{risk.description}</p>
-                              <p className="text-xs text-red-700 dark:text-red-300 mt-1 font-medium">Impact: {risk.potential_impact}</p>
+                              <p className="text-sm font-medium text-red-800 dark:text-red-300">${risk.category}</p>
+                              <p className="text-xs text-red-600 dark:text-red-400 mt-1">${risk.description}</p>
+                              <p className="text-xs text-red-700 dark:text-red-300 mt-1 font-medium">Impact: ${risk.potential_impact}</p>
                             </div>
                           ))}
                         </div>
                       </div>
                     )}
-
-                    {/* Medium Risk Issues */}
                     {result.analysis_result.document_analysis.risk_assessment.filter(risk => risk.severity === 'Medium').length > 0 && (
                       <div>
                         <h5 className="text-sm font-medium text-yellow-600 dark:text-yellow-400 mb-2">Medium Risk Issues</h5>
                         <div className="space-y-2">
                           {result.analysis_result.document_analysis.risk_assessment.filter(risk => risk.severity === 'Medium').map((risk, idx) => (
                             <div key={idx} className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                              <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">{risk.category}</p>
-                              <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">{risk.description}</p>
-                              <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium">Impact: {risk.potential_impact}</p>
+                              <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">${risk.category}</p>
+                              <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">${risk.description}</p>
+                              <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium">Impact: ${risk.potential_impact}</p>
                             </div>
                           ))}
                         </div>
                       </div>
                     )}
-
-                    {/* Low Risk Issues */}
                     {result.analysis_result.document_analysis.risk_assessment.filter(risk => risk.severity === 'Low').length > 0 && (
                       <div>
                         <h5 className="text-sm font-medium text-green-600 dark:text-green-400 mb-2">Low Risk Issues</h5>
                         <div className="space-y-2">
                           {result.analysis_result.document_analysis.risk_assessment.filter(risk => risk.severity === 'Low').slice(0, 3).map((risk, idx) => (
                             <div key={idx} className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                              <p className="text-sm font-medium text-green-800 dark:text-green-300">{risk.category}</p>
-                              <p className="text-xs text-green-600 dark:text-green-400 mt-1">{risk.description}</p>
+                              <p className="text-sm font-medium text-green-800 dark:text-green-300">${risk.category}</p>
+                              <p className="text-xs text-green-600 dark:text-green-400 mt-1">${risk.description}</p>
                             </div>
                           ))}
                         </div>
@@ -584,15 +582,14 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                   {/* Missing Critical Clauses */}
                   <div className="space-y-3">
                     <h4 className="font-semibold text-base">Missing Critical Clauses</h4>
-                    
                     {result.analysis_result.document_analysis.missing_critical_clauses.length > 0 ? (
                       <div className="space-y-2">
                         {result.analysis_result.document_analysis.missing_critical_clauses.map((clause, idx) => (
                           <div key={idx} className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                            <p className="text-sm font-medium text-orange-800 dark:text-orange-300">{clause.clause_name}</p>
-                            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">{clause.reason}</p>
+                            <p className="text-sm font-medium text-orange-800 dark:text-orange-300">${clause.clause_name}</p>
+                            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">${clause.reason}</p>
                             <span className="text-xs px-2 py-1 bg-orange-200 dark:bg-orange-800 text-orange-800 dark:text-orange-200 rounded-full mt-2 inline-block">
-                              {clause.importance}
+                              ${clause.importance}
                             </span>
                           </div>
                         ))}
@@ -608,8 +605,6 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                       <h4 className="font-semibold text-base">Improvement Recommendations</h4>
                       <p className="text-xs text-slate-500">Select for report</p>
                     </div>
-                    
-                    {/* Priority Selection Controls */}
                     <div className="flex gap-2 mb-3">
                       {Object.entries(getPriorityGroups()).sort(([a], [b]) => Number(a) - Number(b)).map(([priority, count]) => (
                         <div key={priority} className="flex items-center gap-2 p-2 bg-slate-100 dark:bg-slate-700 rounded text-xs">
@@ -618,11 +613,10 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                             onCheckedChange={(checked) => handleSelectAllByPriority(Number(priority), checked)}
                             className="scale-75"
                           />
-                          <span>P{priority} ({count})</span>
+                          <span>P${priority} (${count})</span>
                         </div>
                       ))}
                     </div>
-                    
                     {result.analysis_result.document_analysis.improvement_recommendations && result.analysis_result.document_analysis.improvement_recommendations.length > 0 ? (
                       <div className="space-y-2 max-h-96 overflow-y-auto">
                         {result.analysis_result.document_analysis.improvement_recommendations
@@ -649,10 +643,10 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
                                       <div className={`w-4 h-4 rounded bg-gradient-to-r ${getPriorityColor(rec.priority)} flex items-center justify-center`}>
-                                        <span className="text-xs text-white font-bold">{rec.priority}</span>
+                                        <span className="text-xs text-white font-bold">${rec.priority}</span>
                                       </div>
                                       <span className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full">
-                                        {rec.category}
+                                        ${rec.category}
                                       </span>
                                       {isSelected && (
                                         <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs">
@@ -660,12 +654,12 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                                         </Badge>
                                       )}
                                     </div>
-                                    <p className="text-sm font-medium text-blue-800 dark:text-blue-300">{rec.description}</p>
-                                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">{rec.justification}</p>
+                                    <p className="text-sm font-medium text-blue-800 dark:text-blue-300">${rec.description}</p>
+                                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">${rec.justification}</p>
                                     {rec.suggested_implementation && (
                                       <div className="mt-2">
                                         <p className="text-xs font-medium text-slate-600 dark:text-slate-400">Implementation:</p>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{rec.suggested_implementation}</p>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">${rec.suggested_implementation}</p>
                                       </div>
                                     )}
                                   </div>
@@ -688,25 +682,117 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
                   <div className="grid md:grid-cols-3 gap-4">
                     <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                       <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Industry Standards:</span>
-                      <p className="text-sm mt-1 capitalize text-slate-700 dark:text-slate-300">{result.analysis_result.document_analysis.compliance_check.industry_standards}</p>
+                      <p className="text-sm mt-1 text-slate-700 dark:text-slate-300">
+                        {result.analysis_result.document_analysis.compliance_check.industry_standards.length > 100 && !showFullCompliance[`${result.id}-industry`]
+                          ? result.analysis_result.document_analysis.compliance_check.industry_standards.slice(0, 100) + '...'
+                          : result.analysis_result.document_analysis.compliance_check.industry_standards}
+                      </p>
+                      {result.analysis_result.document_analysis.compliance_check.industry_standards.length > 100 && (
+                        <Dialog
+                          open={showFullCompliance[`${result.id}-industry`]}
+                          onOpenChange={() => toggleFullCompliance(`${result.id}-industry`)}
+                        >
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="mt-1 text-blue-600 dark:text-blue-400"
+                              onClick={() => toggleFullCompliance(`${result.id}-industry`)}
+                            >
+                              <Eye className="w-4 h-4 mr-1" /> Read Full
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Industry Standards</DialogTitle>
+                              <DialogDescription>
+                                Full text of industry standards compliance
+                              </DialogDescription>
+                            </DialogHeader>
+                            <ScrollArea className="max-h-[50vh]">
+                              <p className="text-sm text-slate-700 dark:text-slate-300">
+                                {result.analysis_result.document_analysis.compliance_check.industry_standards}
+                              </p>
+                            </ScrollArea>
+                          </DialogContent>
+                        </Dialog>
+                      )}
                     </div>
                     <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                       <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Regulatory Requirements:</span>
                       <p className="text-sm mt-1 text-slate-700 dark:text-slate-300">
-                        {result.analysis_result.document_analysis.compliance_check.regulatory_requirements.length > 100 
+                        {result.analysis_result.document_analysis.compliance_check.regulatory_requirements.length > 100 && !showFullCompliance[`${result.id}-regulatory`]
                           ? result.analysis_result.document_analysis.compliance_check.regulatory_requirements.slice(0, 100) + '...'
-                          : result.analysis_result.document_analysis.compliance_check.regulatory_requirements
-                        }
+                          : result.analysis_result.document_analysis.compliance_check.regulatory_requirements}
                       </p>
+                      {result.analysis_result.document_analysis.compliance_check.regulatory_requirements.length > 100 && (
+                        <Dialog
+                          open={showFullCompliance[`${result.id}-regulatory`]}
+                          onOpenChange={() => toggleFullCompliance(`${result.id}-regulatory`)}
+                        >
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="mt-1 text-blue-600 dark:text-blue-400"
+                              onClick={() => toggleFullCompliance(`${result.id}-regulatory`)}
+                            >
+                              <Eye className="w-4 h-4 mr-1" /> Read Full
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Regulatory Requirements</DialogTitle>
+                              <DialogDescription>
+                                Full text of regulatory requirements compliance
+                              </DialogDescription>
+                            </DialogHeader>
+                            <ScrollArea className="max-h-[50vh]">
+                              <p className="text-sm text-slate-700 dark:text-slate-300">
+                                {result.analysis_result.document_analysis.compliance_check.regulatory_requirements}
+                              </p>
+                            </ScrollArea>
+                          </DialogContent>
+                        </Dialog>
+                      )}
                     </div>
                     <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                       <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Best Practices:</span>
                       <p className="text-sm mt-1 text-slate-700 dark:text-slate-300">
-                        {result.analysis_result.document_analysis.compliance_check.best_practices.length > 100 
+                        {result.analysis_result.document_analysis.compliance_check.best_practices.length > 100 && !showFullCompliance[`${result.id}-best`]
                           ? result.analysis_result.document_analysis.compliance_check.best_practices.slice(0, 100) + '...'
-                          : result.analysis_result.document_analysis.compliance_check.best_practices
-                        }
+                          : result.analysis_result.document_analysis.compliance_check.best_practices}
                       </p>
+                      {result.analysis_result.document_analysis.compliance_check.best_practices.length > 100 && (
+                        <Dialog
+                          open={showFullCompliance[`${result.id}-best`]}
+                          onOpenChange={() => toggleFullCompliance(`${result.id}-best`)}
+                        >
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="mt-1 text-blue-600 dark:text-blue-400"
+                              onClick={() => toggleFullCompliance(`${result.id}-best`)}
+                            >
+                              <Eye className="w-4 h-4 mr-1" /> Read Full
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Best Practices</DialogTitle>
+                              <DialogDescription>
+                                Full text of best practices compliance
+                              </DialogDescription>
+                            </DialogHeader>
+                            <ScrollArea className="max-h-[50vh]">
+                              <p className="text-sm text-slate-700 dark:text-slate-300">
+                                {result.analysis_result.document_analysis.compliance_check.best_practices}
+                              </p>
+                            </ScrollArea>
+                          </DialogContent>
+                        </Dialog>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -725,7 +811,7 @@ export function ResultsModal({ open, onOpenChange, results }: ResultsModalProps)
               )}
             </div>
             <Badge variant="outline" className="bg-green-50 text-green-700">
-              {getSelectedCount()} selected
+              ${getSelectedCount()} selected
             </Badge>
           </div>
           <div className="flex gap-2">
