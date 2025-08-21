@@ -244,7 +244,7 @@ export function HeroSection() {
                     <FileText className="w-4 h-4 text-white" aria-hidden="true" />
                   </div>
                   <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Upload Contract Documents</h3>
-                  <Badge variant="secondary" className="ml-auto text-xs">Try Demo</Badge>
+                  <Badge variant="secondary" className="ml-auto text-xs">Try Beta Mode</Badge>
                 </div>
 
                 <ProcessingProgress progress={processingProgress} isProcessing={isProcessing} />
