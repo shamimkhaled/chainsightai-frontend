@@ -1,102 +1,62 @@
-"use client";
-
 import { useState } from "react";
 import { BookDemoForm } from "@/components/BookDemoForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
-import { Calendar } from "lucide-react";
+// Define props interface for BookDemoSection
+interface BookDemoSectionProps {
+  id?: string; // Make id optional
+}
 
-export function BookDemoSection() {
+const BookDemoSection = ({ id }: BookDemoSectionProps) => {
   const [open, setOpen] = useState(false);
 
   return (
-    <section
-      id="book-demo"
-      className="py-16 px-6 bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-800 dark:to-slate-700"
-    >
-      <div className="max-w-4xl mx-auto text-center">
-        {/* Heading */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">
-            See ChainSight in Action
-          </h2>
-          <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
-            Get a personalized demo tailored to your business needs. Discover how
-            ChainSight can help you identify and mitigate supply chain risks before
-            they impact your operations.
-          </p>
-        </div>
-
-        {/* Book Demo Button */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg max-w-2xl mx-auto">
-          <div className="mb-6">
-            <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
-              Book Your Demo
-            </h3>
-            <p className="text-slate-600 dark:text-slate-400">
+    <section className="py-20" id={id}>
+      <div className="container mx-auto px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-600 dark:to-purple-600 rounded-2xl p-12">
+            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
+              See ChainSight in Action
+            </h2>
+            <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
+              Get a personalized demo tailored to your business needs. Discover how ChainSight can help you identify and mitigate supply chain risks before they impact your operations.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                to="/pricing"
+                className="bg-white text-blue-600 hover:bg-slate-100 px-8 py-4 rounded-lg font-semibold transition-colors text-center"
+              >
+                Start Free Trial
+              </Link>
+              <button
+                onClick={() => setOpen(true)}
+                className="border border-white/30 text-white hover:bg-white/10 px-8 py-4 rounded-lg font-semibold transition-colors text-center"
+              >
+                Book Your Demo
+              </button>
+            </div>
+            <p className="text-sm text-white/60 mt-6">
               Schedule a 30-minute session with our team
-            </p>
-          </div>
-
-          <Button onClick={() => setOpen(true)} className="w-half bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
-            <Calendar className="w-4 h-4 mr-2" />
-            Book Demo
-          </Button>
-
-        </div>
-
-        {/* Features */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
-          <div className="text-center">
-            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mx-auto mb-3">
-              <span className="text-2xl">🔍</span>
-            </div>
-            <h4 className="font-semibold text-slate-900 dark:text-white mb-1">
-              Live Walkthrough
-            </h4>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              See real-time risk detection in action
-            </p>
-          </div>
-
-          <div className="text-center">
-            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mx-auto mb-3">
-              <span className="text-2xl">⚡</span>
-            </div>
-            <h4 className="font-semibold text-slate-900 dark:text-white mb-1">
-              Custom Use Cases
-            </h4>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Tailored to your industry and needs
-            </p>
-          </div>
-
-          <div className="text-center">
-            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mx-auto mb-3">
-              <span className="text-2xl">💡</span>
-            </div>
-            <h4 className="font-semibold text-slate-900 dark:text-white mb-1">
-              Expert Insights
-            </h4>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Get answers from our risk specialists
             </p>
           </div>
         </div>
       </div>
-
-      {/* Modal */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg bg-slate-900 border border-white/20">
           <DialogHeader>
-            {/* <DialogTitle className="text-xl font-semibold">
+            <DialogTitle className="text-xl font-semibold text-white text-center">
               Book Your Demo
-            </DialogTitle> */}
+            </DialogTitle>
           </DialogHeader>
-          <BookDemoForm />
+          <BookDemoForm variant="light" />
         </DialogContent>
       </Dialog>
     </section>
   );
-}
+};
+
+export { BookDemoSection }; // Use named export
+
+
