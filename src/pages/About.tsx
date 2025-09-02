@@ -43,22 +43,22 @@ const About = () => {
 
   const milestones = [
     {
-      year: "2024",
+      year: "2025",
       title: "ChainSight Founded",
       description: "Founded by experienced leaders with deep expertise in AI, risk management, and global trade."
     },
     {
-      year: "2024",
+      year: "2025",
       title: "Beta Platform Launch",
       description: "Launched our AI-powered contract analysis platform with initial enterprise clients."
     },
     {
-      year: "2025",
+      year: "2026",
       title: "Global Expansion",
       description: "Expanding operations across 15+ countries with localized risk intelligence."
     },
     {
-      year: "2025",
+      year: "2026",
       title: "Advanced AI Models",
       description: "Deploying next-generation AI models for predictive risk analytics and real-time monitoring."
     }
