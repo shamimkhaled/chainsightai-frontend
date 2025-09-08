@@ -117,7 +117,7 @@ export function ContractUploadSection() {
   const checkIPRateLimit = async () => {
     setIsCheckingRateLimit(true);
     try {
-      const response = await fetch('https://chainsightai-app-6kgwc.ondigitalocean.app/api/v1/rate-limit/', {
+      const response = await fetch('https://chainsightai-app-34v92.ondigitalocean.app/api/v1/rate-limit/', {
         method: 'GET',
         headers: {
           'accept': 'application/json',
@@ -184,7 +184,7 @@ export function ContractUploadSection() {
         formDataToSend.append('file', file);
         formDataToSend.append('industry', formData.industry.toLowerCase());
 
-        const response = await fetch('https://chainsightai-app-6kgwc.ondigitalocean.app/api/v1/contracts/', {
+        const response = await fetch('https://chainsightai-app-34v92.ondigitalocean.app/api/v1/contracts/', {
           method: 'POST',
           body: formDataToSend,
           headers: {

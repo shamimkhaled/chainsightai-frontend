@@ -43,7 +43,7 @@ interface JoinWaitlistResponse {
   };
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://chainsightai-app-6kgwc.ondigitalocean.app/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://chainsightai-app-34v92.ondigitalocean.app/api/v1';
 
 export function WaitlistForm({ variant = 'default' }: WaitlistFormProps) {
   const [formData, setFormData] = useState<FormData>({
