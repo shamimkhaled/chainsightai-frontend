@@ -483,47 +483,56 @@ export function HeroSection() {
     setProcessingProgress(5);
 
     try {
-      const formData = new FormData();
-      data.files.forEach((file) => {
-        formData.append('files', file);
-      });
-      formData.append('industry', data.industry);
+      const uploadResults: ContractResult[] = [];
 
-      const response = await fetch(`${API_BASE_URL}/contracts/`, {
-        method: 'POST',
-        body: formData,
-      });
+      for (const file of data.files) {
+        const formDataToSend = new FormData();
+        formDataToSend.append('file', file);
+        formDataToSend.append('industry', data.industry.toLowerCase());
 
-      if (response.ok) {
+        const response = await fetch(`${API_BASE_URL}/contracts/`, {
+          method: 'POST',
+          body: formDataToSend,
+          headers: {
+            'accept': 'application/json',
+            'X-CSRFTOKEN': 'kdFZ5pqo5Q207gB3CVs8jhMqMXMswbjfTmcLlw8yIHpW69jeb3x3iXUW6JXNdlsg'
+          }
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || errorData.message || `Upload failed for ${file.name}`);
+        }
+
         const result = await response.json();
-        setProcessingProgress(100);
-        
-        setTimeout(() => {
-          setResults(result);
-          setShowResults(true);
-          setIsProcessing(false);
-          setProcessingProgress(0);
-          toast({
-            title: "Analysis complete!",
-            description: "Your contract analysis is ready to view.",
-          });
-        }, 1000);
-      } else {
-        const errorData = await response.text();
-        throw new Error(errorData || 'Analysis failed');
+        uploadResults.push(result);
       }
+
+      setProcessingProgress(100);
+      setResults(uploadResults);
+      setShowResults(true);
+
+      toast({
+        title: "Analysis Complete!",
+        description: `Successfully analyzed ${uploadResults.length} contract(s).`,
+      });
+
+      await checkIPRateLimit();
+
     } catch (error: any) {
       console.error('Upload error:', error);
       setIsProcessing(false);
       setProcessingProgress(0);
-      
+
       toast({
-        title: "Analysis failed",
-        description: error.message || "Please try again later.",
+        title: "Upload failed",
+        description: error.message || "There was an error uploading your contracts.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
+      setIsProcessing(false);
+      setProcessingProgress(0);
     }
   };
 
