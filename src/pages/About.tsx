@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { BrainCircuit, Target, Users, Globe, Award, Lightbulb, Shield, TrendingUp } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
+import { BookDemoSection } from '@/components/sections/BookDemoSection';
 
 const About = () => {
   const [open, setOpen] = useState(false);
@@ -273,7 +274,7 @@ const About = () => {
 
         {/* Join Us Section */}
         <section id='book-demo-section' className="py-20">
-        <div className="container mx-auto px-6">
+        {/* <div className="container mx-auto px-6">
             <div className="max-w-4xl mx-auto text-center">
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-600 dark:to-purple-600 rounded-2xl p-12">
                 <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
@@ -287,7 +288,7 @@ const About = () => {
                     Start Free Trial
                 </Link>
                 <button onClick={() => setOpen(true)} className="border border-white/30 text-white hover:bg-white/10 px-8 py-4 rounded-lg font-semibold transition-colors">
-                   {/* <Calendar className="w-4 h-4 mr-2" /> */}
+                  
                     Schedule Demo
                 </button>
 
@@ -295,7 +296,9 @@ const About = () => {
                 </div>
             </div>
             </div>
-        </div>
+        </div> */}
+
+        <BookDemoSection />
 
 
          {/* Modal */}

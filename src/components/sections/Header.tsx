@@ -19,6 +19,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+interface NavItem {
+  name: string;
+  href: string;
+  submenu?: { name: string; href: string; }[];
+}
+
 const AuthModal = ({ open, onOpenChange, isSignUp, setIsSignUp }: any) => {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -115,19 +121,30 @@ export function Header() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isDark, setIsDark] = useState(false);
   const location = useLocation();
 
-  const navigation = [
+  useEffect(() => {
+    const checkTheme = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+    checkTheme();
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
+  const navigation: NavItem[] = [
     { name: "Home", href: "/" },
-    { 
-      name: "Solutions", 
-      href: "#",
-      submenu: [
-        { name: "Contract Analysis", href: "/contract-analysis" },
-        { name: "Vendor Monitoring", href: "/vendor-monitoring" },
-        { name: "Risk Assessment", href: "/risk-assessment" },
-      ]
-    },
+    // { 
+    //   name: "Solutions", 
+    //   href: "#",
+    //   submenu: [
+    //     { name: "Contract Analysis", href: "/contract-analysis" },
+    //     { name: "Vendor Monitoring", href: "/vendor-monitoring" },
+    //     { name: "Risk Assessment", href: "/risk-assessment" },
+    //   ]
+    // },
     { name: "Case Studies", href: "/case-studies" },
     { name: "Pricing", href: "/pricing" },
     { name: "About", href: "/about" },
@@ -163,10 +180,10 @@ export function Header() {
             <div className="flex items-center">
               <Link to="/" className="flex items-center space-x-4 group">
                 <div className="relative">
-                  <img 
-                    src="/logo.png" 
-                    alt="ChainSight Logo" 
-                    className="w-100 h-20 transition-transform duration-300 group-hover:scale-110"
+                  <img
+                    src={isDark ? "/logo-light.png" : "/logo-dark.png"}
+                    alt="ChainSight Logo"
+                    className="w-24 h-25 transition-transform duration-300 group-hover:scale-110"
                     onError={(e) => {
                       // Fallback to gradient background if image fails to load
                       e.currentTarget.style.display = 'none';
@@ -174,8 +191,8 @@ export function Header() {
                       if (fallback) fallback.style.display = 'flex';
                     }}
                   />
-                  <div 
-                    className="w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-600 rounded-xl flex items-center justify-center hidden transition-transform duration-300 group-hover:scale-110"
+                  <div
+                    className="w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-600 rounded-xl hidden transition-transform duration-300 group-hover:scale-110"
                     style={{ display: 'none' }}
                   >
                     <div className="w-6 h-6 border-2 border-white rounded-lg relative">

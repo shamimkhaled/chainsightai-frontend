@@ -629,7 +629,7 @@ export function HeroSection() {
                       <div key={i} className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full border-2 border-white dark:border-slate-900"></div>
                     ))}
                   </div>
-                  <span className="font-medium">500+ companies trust us</span>
+                  <span className="font-medium">250+ companies trust us</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />

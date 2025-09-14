@@ -1,0 +1,2 @@
+- [x] Add theme tracking state and effect in Header.tsx
+- [x] Update logo img src to be conditional based on theme
