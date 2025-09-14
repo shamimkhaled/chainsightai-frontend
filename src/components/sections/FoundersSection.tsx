@@ -108,23 +108,19 @@ export default function FoundersSection() {
         </div>
 
         {/* Founder 1 */}
-        <div className="flex flex-col md:flex-row items-center mb-12 bg-slate-50 dark:bg-slate-800 rounded-2xl p-6 shadow-md transition hover:shadow-lg">
-          {/* Founder Image */}
+        {/* <div className="flex flex-col md:flex-row items-center mb-12 bg-slate-50 dark:bg-slate-800 rounded-2xl p-6 shadow-md transition hover:shadow-lg">
+    
           <img
             src="/PratimLala.jpeg"
             alt="Founder 1"
             className="w-40 h-40 aspect-square rounded-full object-cover mb-4 md:mb-0 md:mr-8"
           />
 
-          {/* Content */}
           <div>
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
               {founders[1].name}
             </h3>
-            {/* <p className="text-sm text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-2">
-              <Briefcase className="w-4 h-4" /> CEO, ChainSight | 25+ Years in
-              Supply Chain Risk
-            </p> */}
+           
 
             <p className="text-slate-700 dark:text-slate-300 text-justify mb-4">
               CTO , ChainSightAI | Technology & Systems Leader Pratim is a seasoned technology and business leader with two decades of experience spanning telecom, system integration, outsourcing, and enterprise solutions. As Co-Founder & Executive Director at ChainSightAI, he leverages his deep technical expertise and strategic leadership to architect scalable systems and strengthen organizational efficiency.
@@ -133,7 +129,7 @@ export default function FoundersSection() {
               He has served as CEO, CTO, and Executive Director across companies in Bangladesh, Singapore, and Hong Kong, including Genex Infosys, SOFTCALL, Hanzo Communications, Bitucom, and Accord Telecom. His work has focused on deploying large-scale technology systems, managing BPO operations, and driving digital innovation across global markets.
             </p>
 
-            {/* Key Highlights */}
+      
             <div className="mb-4">
               <h4 className="text-slate-800 dark:text-white font-semibold mb-1 flex items-center gap-2">
                 <Lightbulb className="w-4 h-4" /> Areas of Expertise
@@ -147,14 +143,8 @@ export default function FoundersSection() {
               </ul>
             </div>
 
-            {/* Contact / Social */}
             <div className="flex items-center space-x-4 mt-4">
-              {/* <a
-                href="mailto:founder@example.com"
-                className="text-slate-500 hover:text-blue-600 dark:hover:text-blue-400"
-              >
-                <Mail className="w-5 h-5" />
-              </a> */}
+        
               <a
                 href="https://www.linkedin.com/in/pratim-lala/"
                 target="_blank"
@@ -168,7 +158,7 @@ export default function FoundersSection() {
               </span>
             </div>
           </div>
-        </div>
+        </div> */}
 
 
         {/* Founder 3 */}
