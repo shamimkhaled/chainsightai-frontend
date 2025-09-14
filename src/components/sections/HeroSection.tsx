@@ -489,7 +489,7 @@ export function HeroSection() {
       });
       formData.append('industry', data.industry);
 
-      const response = await fetch(`${API_BASE_URL}/analyze/`, {
+      const response = await fetch(`${API_BASE_URL}/contracts/`, {
         method: 'POST',
         body: formData,
       });
