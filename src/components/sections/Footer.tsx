@@ -304,6 +304,8 @@ export function Footer() {
                     <div>
                       <p className="text-slate-400 text-sm font-light">Visit Us</p>
                       <p className="text-white text-sm">San Francisco, CA</p>
+                      <p className="text-white text-sm">Khulna, Bangladesh</p>
+
                     </div>
                   </div>
                 </div>
